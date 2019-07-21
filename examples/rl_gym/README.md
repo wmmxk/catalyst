@@ -31,11 +31,14 @@
     export CONFIG=./rl_gym/config_td3.yml
 
 
-    # REINFORCE  – on-policy algorithm on discrete action space LunarLander environment
-    export CONFIG=./rl_gym/config_reinforce.yml
+    # A2C        – on-policy algorithm on discrete action space LunarLander environment
+    export CONFIG=./rl_gym/config_a2c.yml
 
     # PPO        – on-policy algorithm on discrete action space LunarLander environment
     export CONFIG=./rl_gym/config_ppo.yml
+
+    # REINFORCE  – on-policy algorithm on discrete action space LunarLander environment
+    export CONFIG=./rl_gym/config_reinforce.yml
     ```
 
 3. Run trainer

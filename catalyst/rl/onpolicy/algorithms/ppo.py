@@ -16,6 +16,8 @@ class PPO(OnpolicyActorCritic):
         self.use_value_clipping = use_value_clipping
         self.gae_lambda = gae_lambda
         self.clip_eps = clip_eps
+        self.entropy_reg_coefficient = entropy_reg_coefficient
+
         critic_distribution = self.critic.distribution
         self._value_loss_fn = self._base_value_loss
         self._num_atoms = self.critic.num_atoms
@@ -31,7 +33,6 @@ class PPO(OnpolicyActorCritic):
         self._gammas_torch = utils.any2device(
             self._gammas, device=self._device
         )[None, :, None]
-        self.entropy_reg_coefficient = entropy_reg_coefficient
 
         if critic_distribution == "categorical":
             self.num_atoms = self.critic.num_atoms
@@ -221,7 +222,8 @@ class PPO(OnpolicyActorCritic):
 
     def train(self, batch, **kwargs):
         (
-            states_t, actions_t, returns_t, states_tp1, done_t, values_t,
+            states_t, actions_t, returns_t,
+            states_tp1, done_t, values_t,
             advantages_t, action_logprobs_t
         ) = (
             batch["state"], batch["action"], batch["return"],
