@@ -10,10 +10,12 @@ class A2C(OnpolicyActorCritic):
     def _init(
         self,
         use_acktr_optimizer: bool = False,
+        gae_lambda: float = 0.95,
         entropy_reg_coefficient: float = 0.
     ):
         assert not use_acktr_optimizer, "Not implemented yet"
         self.use_acktr_optimizer = use_acktr_optimizer
+        self.gae_lambda = gae_lambda
         self.entropy_reg_coefficient = entropy_reg_coefficient
 
         critic_distribution = self.critic.distribution
@@ -42,9 +44,9 @@ class A2C(OnpolicyActorCritic):
                 "shape": (),
                 "dtype": np.float32
             },
-            "done": {
-                "shape": (),
-                "dtype": np.bool
+            "advantage": {
+                "shape": (self._num_heads, self._num_atoms),
+                "dtype": np.float32
             },
             "return": {
                 "shape": (self._num_heads, ),
@@ -58,13 +60,33 @@ class A2C(OnpolicyActorCritic):
 
         trajectory_len = \
             rewards.shape[0] if dones[-1] else rewards.shape[0] - 1
+        states_len = states.shape[0]
 
         states = utils.any2device(states, device=self._device)
         actions = utils.any2device(actions, device=self._device)
         rewards = np.array(rewards)[:trajectory_len]
-
+        values = torch.zeros(
+            (states_len + 1, self._num_heads, self._num_atoms)). \
+            to(self._device)
+        values[:states_len, ...] = self.critic(states).squeeze_(dim=2)
+        # Each column corresponds to a different gamma
+        values = values.cpu().numpy()[:trajectory_len + 1, ...]
         _, logprobs = self.actor(states, logprob=actions)
         logprobs = logprobs.cpu().numpy().reshape(-1)[:trajectory_len]
+        # len x num_heads
+        deltas = rewards[:, None, None] \
+                 + self._gammas[:, None] * values[1:] - values[:-1]
+
+        # For each gamma in the list of gammas compute the
+        # advantage and returns
+        # len x num_heads x num_atoms
+        advantages = np.stack(
+            [
+                utils.geometric_cumsum(gamma * self.gae_lambda, deltas[:, i])
+                for i, gamma in enumerate(self._gammas)
+            ],
+            axis=1
+        )
 
         # len x num_heads
         returns = np.stack(
@@ -76,25 +98,27 @@ class A2C(OnpolicyActorCritic):
         )
 
         # final rollout
-        dones = dones[:trajectory_len]
-        assert len(returns) == len(logprobs) == len(dones)
+        assert len(logprobs) == len(advantages) == len(returns)
         rollout = {
             "action_logprob": logprobs,
-            "done": dones,
+            "advantage": advantages,
             "return": returns,
         }
+
         return rollout
 
     def postprocess_buffer(self, buffers, len):
-        pass
+        adv = buffers["advantage"][:len]
+        adv = (adv - adv.mean(axis=0)) / (adv.std(axis=0) + 1e-8)
+        buffers["advantage"][:len] = adv
 
     def train(self, batch, **kwargs):
         (
             states_t, actions_t, returns_t,
-            states_tp1, done_t, action_logprobs_t
+            advantages_t, action_logprobs_t
         ) = (
             batch["state"], batch["action"], batch["return"],
-            batch["state_tp1"], batch["done"], batch["action_logprob"]
+            batch["advantage"], batch["action_logprob"]
         )
 
         states_t = utils.any2device(states_t, device=self._device)
@@ -102,8 +126,11 @@ class A2C(OnpolicyActorCritic):
         returns_t = utils.any2device(
             returns_t, device=self._device
         ).unsqueeze_(-1)
-        # states_tp1 = utils.any2device(states_tp1, device=self._device)
-        # done_t = utils.any2device(done_t, device=self._device)[:, None, None]
+
+        advantages_t = utils.any2device(advantages_t, device=self._device)
+        action_logprobs_t = utils.any2device(
+            action_logprobs_t, device=self._device
+        )
 
         action_logprobs_t = utils.any2device(
             action_logprobs_t, device=self._device
@@ -111,12 +138,12 @@ class A2C(OnpolicyActorCritic):
 
         # critic loss
         values_tp0 = self.critic(states_t).squeeze_(dim=2)
-        advantages = (returns_t - values_tp0)
-        value_loss = advantages.pow(2).mean()
+        advantages_tp0 = (returns_t - values_tp0)
+        value_loss = 0.5 * advantages_tp0.pow(2).mean()
 
         # actor loss
         _, action_logprobs_tp0 = self.actor(states_t, logprob=actions_t)
-        policy_loss = -(advantages.detach() * action_logprobs_tp0).mean()
+        policy_loss = -(advantages_t.detach() * action_logprobs_tp0).mean()
 
         entropy = -(
             torch.exp(action_logprobs_tp0) * action_logprobs_tp0).mean()

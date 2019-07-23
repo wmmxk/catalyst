@@ -20,7 +20,6 @@ environment:
 
   frame_skip: 2
   reward_scale: 1.0
-  step_delay: 0.01
 
 agents:
   actor:
@@ -77,6 +76,7 @@ algorithm:
   n_step: 1
   gamma: 0.99
 
+  gae_lambda: 0.95
   use_acktr_optimizer: False
   entropy_reg_coefficient: 0.01
 
@@ -102,7 +102,7 @@ algorithm:
 trainer:
   batch_size: 256              # transitions
   num_workers: 1
-  num_mini_epochs: 10
+  num_mini_epochs: 1
   min_num_trajectories: 1000
   min_num_transitions: 10000
 
