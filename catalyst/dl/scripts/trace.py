@@ -1,4 +1,4 @@
-from typing import Dict  # isort:skip
+from typing import Dict, Union  # isort:skip
 import argparse
 from argparse import ArgumentParser
 from pathlib import Path
@@ -19,6 +19,8 @@ def trace_model_from_checkpoint(
     checkpoint_name: str,
     mode: str = "eval",
     requires_grad: bool = False,
+    distributed_params: dict = None,
+    device: Union[str, torch.device] = "cpu",
 ):
     config_path = logdir / "configs" / "_config.json"
     checkpoint_path = logdir / "checkpoints" / f"{checkpoint_name}.pth"
@@ -41,10 +43,14 @@ def trace_model_from_checkpoint(
 
     print("Tracing")
     traced = trace_model(
-        model, experiment, RunnerType,
+        model,
+        experiment,
+        RunnerType,
         method_name=method_name,
         mode=mode,
         requires_grad=requires_grad,
+        distributed_params=distributed_params,
+        device=device,
     )
 
     print("Done")
@@ -93,6 +99,12 @@ def build_args(parser: ArgumentParser):
         default=False,
         help="If true, model will be traced with `requires_grad_(True)`"
     )
+    parser.add_argument(
+        "--opt-level",
+        type=str,
+        default=None,
+        help="Opt level for FP16 (optional)"
+    )
 
     return parser
 
@@ -110,12 +122,22 @@ def main(args, _):
     checkpoint_name: str = args.checkpoint
     mode: str = args.mode
     requires_grad: bool = args.with_grad
+    opt_level: str = args.opt_level
+
+    if opt_level is not None:
+        distributed_params = {"opt_level": opt_level}
+        device = "cuda"
+    else:
+        distributed_params = None
+        device = "cpu"
 
     traced = trace_model_from_checkpoint(
         logdir, method_name,
         checkpoint_name=checkpoint_name,
         mode=mode,
         requires_grad=requires_grad,
+        distributed_params=distributed_params,
+        device=device,
     )
 
     if args.out_model is None:
@@ -125,6 +147,10 @@ def main(args, _):
 
         if requires_grad:
             file_name += f"-with_grad"
+
+        if opt_level is not None:
+            file_name += f"-opt_{opt_level}"
+
         file_name += ".pth"
 
         output: Path = args.out_dir
