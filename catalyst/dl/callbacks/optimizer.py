@@ -135,7 +135,7 @@ class OptimizerCallback(Callback):
         if hasattr(optimizer, "_amp_stash"):
             from apex import amp
             # Need to set ``delay_unscale``
-            # according to 
+            # according to
             # https://nvidia.github.io/apex/advanced.html#gradient-accumulation-across-iterations
             delay_unscale = not need_gradient_step
             with amp.scale_loss(
