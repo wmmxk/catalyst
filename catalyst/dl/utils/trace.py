@@ -1,4 +1,4 @@
-from typing import Type  # isort:skip
+from typing import Type, Union  # isort:skip
 
 import torch
 from torch import nn
@@ -69,6 +69,8 @@ def trace_model(
     method_name: str = "forward",
     mode: str = "eval",
     requires_grad: bool = False,
+    distributed_params: dict = None,
+    device: Union[str, torch.device] = "cpu",
 ) -> ScriptModule:
     """
     Traces model using it's native experiment and runner.
@@ -81,6 +83,8 @@ def trace_model(
             used as entrypoint during tracing
         mode (str): Mode for model to trace (``train`` or ``eval``)
         requires_grad (bool): Flag to use grads
+        distributed_params (dict): Additional parameters to use for AMP FP16
+        device (str): Torch device
 
     Returns:
         Traced model ScriptModule
@@ -92,12 +96,17 @@ def trace_model(
     utils.set_requires_grad(model, requires_grad=requires_grad)
 
     tracer = _TracingModelWrapper(model, method_name)
-    runner: Runner = runner_type(tracer.cpu(), torch.device("cpu"))
+    if distributed_params is not None:
+        utils.assert_fp16_available()
+        # If traced in AMP we need to initialize the model before calling
+        # the jit
+        # https://github.com/NVIDIA/apex/issues/303#issuecomment-493142950
+        from apex import amp
+        model, _ = amp.initialize(model, optimizers=None, **distributed_params)
+    runner: Runner = runner_type(tracer.to(device), device)
 
     stage = list(experiment.stages)[0]
     batch = _get_native_batch(experiment, stage)
-    batch = runner._batch2device(batch, device=runner.device)
-
     runner.predict_batch(batch)
 
     return tracer.tracing_result
