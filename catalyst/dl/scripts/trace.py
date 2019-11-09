@@ -19,9 +19,26 @@ def trace_model_from_checkpoint(
     checkpoint_name: str,
     mode: str = "eval",
     requires_grad: bool = False,
-    distributed_params: dict = None,
+    opt_level: str = None,
     device: Union[str, torch.device] = "cpu",
 ):
+    """
+    Traces model using created experiment and runner.
+
+    Args:
+        logdir (Union[str, Path]): Path to Catalyst logdir with model
+        checkpoint_name (str): Name of model checkpoint to use
+        method_name (str): Model's method name that will be
+            used as entrypoint during tracing
+        mode (str): Mode for model to trace (``train`` or ``eval``)
+        requires_grad (bool): Flag to use grads
+        opt_level (str): AMP FP16 init level
+        device (str): Torch device
+
+    Returns:
+        the traced model
+    """
+
     config_path = logdir / "configs" / "_config.json"
     checkpoint_path = logdir / "checkpoints" / f"{checkpoint_name}.pth"
     print("Load config")
@@ -49,7 +66,7 @@ def trace_model_from_checkpoint(
         method_name=method_name,
         mode=mode,
         requires_grad=requires_grad,
-        distributed_params=distributed_params,
+        opt_level=opt_level,
         device=device,
     )
 
@@ -58,6 +75,10 @@ def trace_model_from_checkpoint(
 
 
 def build_args(parser: ArgumentParser):
+    """
+    Builds the command line parameters
+    """
+
     parser.add_argument(
         "logdir",
         type=Path,
@@ -110,6 +131,9 @@ def build_args(parser: ArgumentParser):
 
 
 def parse_args():
+    """
+    Parses the command line arguments for the main method
+    """
     parser = argparse.ArgumentParser()
     build_args(parser)
     args = parser.parse_args()
@@ -117,6 +141,9 @@ def parse_args():
 
 
 def main(args, _):
+    """
+    Main method for `catalyst-dl trace`
+    """
     logdir: Path = args.logdir
     method_name: str = args.method
     checkpoint_name: str = args.checkpoint
@@ -125,10 +152,10 @@ def main(args, _):
     opt_level: str = args.opt_level
 
     if opt_level is not None:
-        distributed_params = {"opt_level": opt_level}
+        opt_level = opt_level
         device = "cuda"
     else:
-        distributed_params = None
+        opt_level = None
         device = "cpu"
 
     traced = trace_model_from_checkpoint(
@@ -136,7 +163,7 @@ def main(args, _):
         checkpoint_name=checkpoint_name,
         mode=mode,
         requires_grad=requires_grad,
-        distributed_params=distributed_params,
+        opt_level=opt_level,
         device=device,
     )
 
