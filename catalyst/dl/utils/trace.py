@@ -69,7 +69,7 @@ def trace_model(
     method_name: str = "forward",
     mode: str = "eval",
     requires_grad: bool = False,
-    distributed_params: dict = None,
+    opt_level: str = None,
     device: Union[str, torch.device] = "cpu",
 ) -> ScriptModule:
     """
@@ -83,7 +83,7 @@ def trace_model(
             used as entrypoint during tracing
         mode (str): Mode for model to trace (``train`` or ``eval``)
         requires_grad (bool): Flag to use grads
-        distributed_params (dict): Additional parameters to use for AMP FP16
+        opt_level (str): AMP FP16 init level
         device (str): Torch device
 
     Returns:
@@ -96,13 +96,13 @@ def trace_model(
     utils.set_requires_grad(model, requires_grad=requires_grad)
 
     tracer = _TracingModelWrapper(model, method_name)
-    if distributed_params is not None:
+    if opt_level is not None:
         utils.assert_fp16_available()
         # If traced in AMP we need to initialize the model before calling
         # the jit
         # https://github.com/NVIDIA/apex/issues/303#issuecomment-493142950
         from apex import amp
-        model, _ = amp.initialize(model, optimizers=None, **distributed_params)
+        model, _ = amp.initialize(model, optimizers=None, opt_level=opt_level)
     runner: Runner = runner_type(tracer.to(device), device)
 
     stage = list(experiment.stages)[0]
