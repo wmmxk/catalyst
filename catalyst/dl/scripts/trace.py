@@ -38,7 +38,6 @@ def trace_model_from_checkpoint(
     Returns:
         the traced model
     """
-
     config_path = logdir / "configs" / "_config.json"
     checkpoint_path = logdir / "checkpoints" / f"{checkpoint_name}.pth"
     print("Load config")
@@ -78,7 +77,6 @@ def build_args(parser: ArgumentParser):
     """
     Builds the command line parameters
     """
-
     parser.add_argument(
         "logdir",
         type=Path,
