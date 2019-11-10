@@ -1,11 +1,11 @@
-from typing import Any, Dict, Iterable, Mapping, Tuple  # isort:skip
+from typing import Any, Dict, Iterable, Mapping, Tuple, Union  # isort:skip
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
-from catalyst.dl.utils.torch import _Criterion, _Model, _Optimizer, _Scheduler
+from catalyst.utils.typing import Criterion, Model, Optimizer, Scheduler
 from .callback import Callback
 
 
@@ -46,24 +46,24 @@ class Experiment(ABC):
         pass
 
     @abstractmethod
-    def get_model(self, stage: str) -> _Model:
+    def get_model(self, stage: str) -> Model:
         pass
 
     @abstractmethod
-    def get_criterion(self, stage: str) -> _Criterion:
+    def get_criterion(self, stage: str) -> Criterion:
         pass
 
     @abstractmethod
-    def get_optimizer(self, stage: str, model: nn.Module) -> _Optimizer:
+    def get_optimizer(self, stage: str, model: Model) -> Optimizer:
         pass
 
     @abstractmethod
-    def get_scheduler(self, stage: str, optimizer) -> _Scheduler:
+    def get_scheduler(self, stage: str, optimizer: Optimizer) -> Scheduler:
         pass
 
     def get_experiment_components(
         self, model: nn.Module, stage: str
-    ) -> Tuple[_Criterion, _Optimizer, _Scheduler]:
+    ) -> Tuple[Criterion, Optimizer, Scheduler]:
         criterion = self.get_criterion(stage)
         optimizer = self.get_optimizer(stage, model)
         scheduler = self.get_scheduler(stage, optimizer)
@@ -87,6 +87,29 @@ class Experiment(ABC):
     @staticmethod
     def get_transforms(stage: str = None, mode: str = None):
         raise NotImplementedError
+
+    def get_native_batch(self, stage: str, loader: Union[str, int] = 0):
+        """Returns a batch from experiment loader
+
+        Args:
+            stage (str): stage name
+            loader (Union[str, int]): loader name or its index,
+                default is the first loader
+        """
+        loaders = self.get_loaders(stage)
+        if isinstance(loader, str):
+            _loader = loaders[loader]
+        elif isinstance(loader, int):
+            _loader = list(loaders.values())[loader]
+        else:
+            raise TypeError("Loader parameter must be a string or an integer")
+
+        dataset = _loader.dataset
+        collate_fn = _loader.collate_fn
+
+        sample = collate_fn([dataset[0]])
+
+        return sample
 
 
 __all__ = ["Experiment"]

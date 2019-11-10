@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 
 from catalyst.dl.core import Callback, Experiment
 from catalyst.dl.utils import process_callbacks
-from catalyst.dl.utils.torch import _Criterion, _Model, _Optimizer, _Scheduler
+from catalyst.utils.typing import Criterion, Model, Optimizer, Scheduler
 
 
 class BaseExperiment(Experiment):
@@ -17,14 +17,14 @@ class BaseExperiment(Experiment):
 
     def __init__(
         self,
-        model: _Model,
+        model: Model,
         loaders: "OrderedDict[str, DataLoader]",
         callbacks: "Union[OrderedDict[str, Callback], List[Callback]]" = None,
         logdir: str = None,
         stage: str = "train",
-        criterion: _Criterion = None,
-        optimizer: _Optimizer = None,
-        scheduler: _Scheduler = None,
+        criterion: Criterion = None,
+        optimizer: Optimizer = None,
+        scheduler: Scheduler = None,
         num_epochs: int = 1,
         valid_loader: str = "valid",
         main_metric: str = "loss",
@@ -90,16 +90,16 @@ class BaseExperiment(Experiment):
         state_params = {**default_params, **self._additional_state_kwargs}
         return state_params
 
-    def get_model(self, stage: str) -> _Model:
+    def get_model(self, stage: str) -> Model:
         return self._model
 
-    def get_criterion(self, stage: str) -> _Criterion:
+    def get_criterion(self, stage: str) -> Criterion:
         return self._criterion
 
-    def get_optimizer(self, stage: str, model: nn.Module) -> _Optimizer:
+    def get_optimizer(self, stage: str, model: nn.Module) -> Optimizer:
         return self._optimizer
 
-    def get_scheduler(self, stage: str, optimizer=None) -> _Scheduler:
+    def get_scheduler(self, stage: str, optimizer=None) -> Scheduler:
         return self._scheduler
 
     def get_callbacks(self, stage: str) -> "OrderedDict[str, Callback]":

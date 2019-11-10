@@ -1,4 +1,4 @@
-from typing import Any, Mapping, Optional, Tuple  # isort:skip
+from typing import Any, Mapping, Optional, Tuple, Union  # isort:skip
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 import os
@@ -10,7 +10,9 @@ from torch.utils.data import DistributedSampler
 
 from catalyst.dl import utils
 from catalyst.dl.utils.scripts import dump_base_experiment_code
-from catalyst.dl.utils.torch import _Criterion, _Model, _Optimizer, _Scheduler
+from catalyst.utils.typing import (
+    Criterion, Model, Optimizer, Scheduler, Device
+)
 from .callback import Callback, LoggerCallback
 from .experiment import Experiment
 from .state import RunnerState
@@ -19,15 +21,15 @@ from .state import RunnerState
 class Runner(ABC):
     def __init__(
         self,
-        model: nn.Module = None,
-        device=None,
+        model: Model = None,
+        device: Device = None,
     ):
         """
         @TODO: write docs
         """
         # main
-        self.model: nn.Module = model
-        self.device = device
+        self.model: Model = model
+        self.device: Device = device
         self.experiment: Experiment = None
         self.state: RunnerState = None
         self.callbacks: OrderedDict[str, Callback] = None
@@ -36,13 +38,13 @@ class Runner(ABC):
         # additional
         self._check_run = False
 
-    def _batch2device(self, batch: Mapping[str, Any], device):
+    def _batch2device(self, batch: Mapping[str, Any], device: Device):
         res = utils.any2device(batch, device)
         return res
 
     def _get_experiment_components(
         self, stage: str = None
-    ) -> Tuple[_Model, _Criterion, _Optimizer, _Scheduler, torch.device]:
+    ) -> Tuple[Model, Criterion, Optimizer, Scheduler, Device]:
         """
         Inner method for children's classes for model specific initialization.
         As baseline, checks device support and puts model on it.
@@ -117,6 +119,17 @@ class Runner(ABC):
 
         if self.state is not None:
             getattr(self.state, f"{fn_name}_post")()
+
+    def set_model_device(
+        self,
+        model: Model,
+        device: Device
+    ) -> None:
+        self.model = model
+        self.device = device
+
+    def get_model_device(self) -> Tuple[Model, Device]:
+        return self.model, self.device
 
     @abstractmethod
     def forward(self, batch: Mapping[str, Any]) -> Mapping[str, Any]:

@@ -7,28 +7,25 @@ from torch.utils.data.dataloader import default_collate as default_collate_fn
 
 from catalyst.dl import utils
 from catalyst.utils import maybe_recursive_call
-
-_Model = nn.Module
-_Criterion = nn.Module
-_Optimizer = optim.Optimizer
-# noinspection PyProtectedMember
-_Scheduler = optim.lr_scheduler._LRScheduler
+from catalyst.utils.typing import (
+    Criterion, Model, Optimizer, Scheduler, Device
+)
 
 
 def process_components(
-    model: _Model,
-    criterion: _Criterion = None,
-    optimizer: _Optimizer = None,
-    scheduler: _Scheduler = None,
+    model: Model,
+    criterion: Criterion = None,
+    optimizer: Optimizer = None,
+    scheduler: Scheduler = None,
     distributed_params: Dict = None,
-    device: Union[str, torch.device] = None,
-) -> Tuple[_Model, _Criterion, _Optimizer, _Scheduler, torch.device]:
+    device: Device = None,
+) -> Tuple[Model, Criterion, Optimizer, Scheduler, Device]:
     distributed_params = distributed_params or {}
     distributed_params = copy.deepcopy(distributed_params)
     if device is None:
         device = utils.get_device()
 
-    model = maybe_recursive_call(model, "to", device=device)
+    model: Model= maybe_recursive_call(model, "to", device=device)
 
     if utils.is_wrapped_with_ddp(model):
         pass
@@ -104,6 +101,6 @@ def get_loader(
 
 
 __all__ = [
-    "process_components", "get_loader",
-    "_Model", "_Criterion", "_Optimizer", "_Scheduler"
+    "process_components",
+    "get_loader"
 ]

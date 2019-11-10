@@ -18,7 +18,7 @@ from catalyst.dl.core import Callback, Experiment
 from catalyst.dl.registry import (
     CALLBACKS, CRITERIONS, MODELS, OPTIMIZERS, SCHEDULERS
 )
-from catalyst.dl.utils.torch import _Criterion, _Model, _Optimizer, _Scheduler
+from catalyst.utils.typing import Criterion, Model, Optimizer, Scheduler
 
 
 class ConfigExperiment(Experiment):
@@ -110,7 +110,7 @@ class ConfigExperiment(Experiment):
     def get_state_params(self, stage: str) -> Mapping[str, Any]:
         return self.stages_config[stage].get("state_params", {})
 
-    def _preprocess_model_for_stage(self, stage: str, model: _Model):
+    def _preprocess_model_for_stage(self, stage: str, model: Model):
         stage_index = self.stages.index(stage)
         if stage_index > 0:
             checkpoint_path = \
@@ -119,7 +119,7 @@ class ConfigExperiment(Experiment):
             utils.unpack_checkpoint(checkpoint, model=model)
         return model
 
-    def _postprocess_model_for_stage(self, stage: str, model: _Model):
+    def _postprocess_model_for_stage(self, stage: str, model: Model):
         return model
 
     @staticmethod
@@ -156,7 +156,7 @@ class ConfigExperiment(Experiment):
                 criterion = criterion.cuda()
         return criterion
 
-    def get_criterion(self, stage: str) -> _Criterion:
+    def get_criterion(self, stage: str) -> Criterion:
         criterion_params = \
             self.stages_config[stage].get("criterion_params", {})
         criterion = self._get_criterion(**criterion_params)
@@ -165,9 +165,9 @@ class ConfigExperiment(Experiment):
     def _get_optimizer(
         self,
         stage: str,
-        model: Union[_Model, Dict[str, _Model]],
+        model: Union[Model, Dict[str, Model]],
         **params
-    ) -> _Optimizer:
+    ) -> Optimizer:
         # @TODO 1: refactoring; this method is too long
         # @TODO 2: load state dicts for schedulers & criteria
         layerwise_params = \
@@ -250,8 +250,8 @@ class ConfigExperiment(Experiment):
     def get_optimizer(
         self,
         stage: str,
-        model: Union[_Model, Dict[str, _Model]]
-    ) -> Union[_Optimizer, Dict[str, _Optimizer]]:
+        model: Union[Model, Dict[str, Model]]
+    ) -> Union[Optimizer, Dict[str, Optimizer]]:
         optimizer_params = \
             self.stages_config[stage].get("optimizer_params", {})
         key_value_flag = optimizer_params.pop("_key_value", False)
@@ -286,7 +286,7 @@ class ConfigExperiment(Experiment):
             )
         return scheduler
 
-    def get_scheduler(self, stage: str, optimizer) -> _Scheduler:
+    def get_scheduler(self, stage: str, optimizer: Optimizer) -> Scheduler:
         scheduler_params = \
             self.stages_config[stage].get("scheduler_params", {})
         scheduler = self._get_scheduler(

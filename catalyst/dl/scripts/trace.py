@@ -12,15 +12,19 @@ from catalyst.dl.core import Experiment
 from catalyst.dl.utils.scripts import import_experiment_and_runner
 from catalyst.dl.utils.trace import trace_model
 
+from catalyst.utils.typing import Device
+
 
 def trace_model_from_checkpoint(
     logdir: Path,
     method_name: str,
     checkpoint_name: str,
+    stage: str = None,
+    loader: Union[str, int] = None,
     mode: str = "eval",
     requires_grad: bool = False,
     opt_level: str = None,
-    device: Union[str, torch.device] = "cpu",
+    device: Device = "cpu",
 ):
     """
     Traces model using created experiment and runner.
@@ -53,15 +57,25 @@ def trace_model_from_checkpoint(
     experiment: Experiment = ExperimentType(config)
 
     print(f"Load model state from checkpoints/{checkpoint_name}.pth")
-    model = experiment.get_model(next(iter(experiment.stages)))
+    if stage is None:
+        stage = list(experiment.stages)[0]
+
+    model = experiment.get_model(stage)
     checkpoint = utils.load_checkpoint(checkpoint_path)
     utils.unpack_checkpoint(checkpoint, model=model)
+
+    runner: RunnerType = RunnerType()
+    runner.set_model_device(model, device)
+
+    if loader is None:
+        loader = 0
+    batch = experiment.get_native_batch(stage, loader)
 
     print("Tracing")
     traced = trace_model(
         model,
-        experiment,
-        RunnerType,
+        runner,
+        batch,
         method_name=method_name,
         mode=mode,
         requires_grad=requires_grad,
@@ -125,6 +139,20 @@ def build_args(parser: ArgumentParser):
         help="Opt level for FP16 (optional)"
     )
 
+    parser.add_argument(
+        "--stage",
+        type=str,
+        default=None,
+        help="Stage from the experiment from which the model and loader will be taken."
+    )
+
+    parser.add_argument(
+        "--loader",
+        type=str,
+        default=None,
+        help="Loader name to get the batch from"
+    )
+
     return parser
 
 
@@ -159,6 +187,8 @@ def main(args, _):
     traced = trace_model_from_checkpoint(
         logdir, method_name,
         checkpoint_name=checkpoint_name,
+        stage=args.stage,
+        loader=args.loader,
         mode=mode,
         requires_grad=requires_grad,
         opt_level=opt_level,

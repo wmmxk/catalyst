@@ -1,7 +1,7 @@
 # flake8: noqa
 # isort:skip_file
 
-from .argparse import args_are_not_none, boolean_flag
+from .argparse import boolean_flag
 from .checkpoint import (
     load_checkpoint, pack_checkpoint, save_checkpoint, unpack_checkpoint
 )
@@ -25,7 +25,7 @@ from .initialization import (
 )
 from .misc import (
     append_dict, copy_directory, flatten_dict, get_utcnow_time, is_exception,
-    make_tuple, maybe_recursive_call, merge_dicts, pairwise
+    make_tuple, maybe_recursive_call, merge_dicts, pairwise, args_are_not_none
 )
 from .numpy import (
     dict2structed, geometric_cumsum, get_one_hot, np_softmax, structed2dict

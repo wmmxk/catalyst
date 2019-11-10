@@ -8,7 +8,9 @@ from torch.utils.data import DataLoader
 from catalyst.dl.callbacks import CheckpointCallback, InferCallback
 from catalyst.dl.core import Callback, Runner
 from catalyst.dl.experiment import SupervisedExperiment
-from catalyst.dl.utils.torch import _Criterion, _Model, _Optimizer, _Scheduler
+from catalyst.utils.typing import (
+    Criterion, Model, Optimizer, Scheduler, Device
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +23,8 @@ class SupervisedRunner(Runner):
 
     def __init__(
         self,
-        model: nn.Module = None,
-        device=None,
+        model: Model = None,
+        device: Device = None,
         input_key: str = "features",
         output_key: str = "logits",
         input_target_key: str = "targets",
@@ -52,7 +54,7 @@ class SupervisedRunner(Runner):
         else:
             self._process_output = self._process_output_none
 
-    def _batch2device(self, batch: Mapping[str, Any], device):
+    def _batch2device(self, batch: Mapping[str, Any], device: Device):
         if isinstance(batch, (tuple, list)):
             assert len(batch) == 2
             batch = {self.input_key: batch[0], self.target_key: batch[1]}
@@ -96,13 +98,13 @@ class SupervisedRunner(Runner):
 
     def train(
         self,
-        model: _Model,
-        criterion: _Criterion,
-        optimizer: _Optimizer,
+        model: Model,
+        criterion: Criterion,
+        optimizer: Optimizer,
         loaders: "OrderedDict[str, DataLoader]",
         logdir: str,
         callbacks: "Union[List[Callback], OrderedDict[str, Callback]]" = None,
-        scheduler: _Scheduler = None,
+        scheduler: Scheduler = None,
         resume: str = None,
         num_epochs: int = 1,
         valid_loader: str = "valid",
@@ -197,7 +199,7 @@ class SupervisedRunner(Runner):
 
     def infer(
         self,
-        model: _Model,
+        model: Model,
         loaders: "OrderedDict[str, DataLoader]",
         callbacks: "Union[List[Callback], OrderedDict[str, Callback]]" = None,
         verbose: bool = False,
@@ -241,7 +243,7 @@ class SupervisedRunner(Runner):
 
     def predict_loader(
         self,
-        model: _Model,
+        model: Model,
         loader: DataLoader,
         resume: str = None,
         verbose: bool = False,

@@ -9,9 +9,9 @@ import safitty
 import torch
 from torch import nn
 import torch.backends.cudnn as cudnn
-from torch.optim import Optimizer
 
 from catalyst import utils
+from catalyst.utils.typing import Model, Device, Optimizer
 
 
 def ce_with_logits(logits, target):
@@ -160,7 +160,7 @@ def get_activation_fn(activation: str = None):
     return activation_fn
 
 
-def any2device(value, device):
+def any2device(value, device: Device):
     """
     Move tensor, list of tensors, list of list of tensors,
     dict of tensors, tuple of tensors to target device.
@@ -212,7 +212,7 @@ def prepare_cudnn(deterministic: bool = None, benchmark: bool = None) -> None:
 
 
 def process_model_params(
-    model: nn.Module,
+    model: Model,
     layerwise_params: Dict[str, dict] = None,
     no_bias_weight_decay: bool = True,
     lr_scaling: float = 1.0
@@ -266,7 +266,7 @@ def process_model_params(
     return model_params
 
 
-def set_requires_grad(model: nn.Module, requires_grad: bool):
+def set_requires_grad(model: Model, requires_grad: bool):
     """
     Sets the ``requires_grad`` value for all model parameters.
 
@@ -283,7 +283,7 @@ def set_requires_grad(model: nn.Module, requires_grad: bool):
         param.requires_grad = requires_grad
 
 
-def get_network_output(net: nn.Module, *input_shapes):
+def get_network_output(net: Model, *input_shapes):
     inputs = []
     for input_shape in input_shapes:
         if isinstance(input_shape, dict):

@@ -1,4 +1,4 @@
-from typing import Any, Iterable  # isort:skip
+from typing import Any, Iterable, Optional  # isort:skip
 
 import collections
 import copy
@@ -160,3 +160,22 @@ def get_utcnow_time(format: str = None) -> str:
         format = "%y%m%d.%H%M%S"
     result = datetime.utcnow().strftime(format)
     return result
+
+
+def args_are_not_none(*args: Optional[Any]) -> bool:
+    """
+    Check that all arguments are not None
+    Args:
+        *args (Any): values
+    Returns:
+         bool: True if all value were not None, False otherwise
+    """
+    if args is None:
+        return False
+
+    for arg in args:
+        if arg is None:
+            return False
+
+    return True
+
