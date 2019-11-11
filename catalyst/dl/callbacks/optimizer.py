@@ -41,7 +41,7 @@ class OptimizerCallback(Callback):
         grad_clip_params: dict = grad_clip_params or {}
         self.grad_clip_fn = GRAD_CLIPPERS.get_from_params(**grad_clip_params)
 
-        self.accumulation_steps: int = 3 # accumulation_steps
+        self.accumulation_steps: int = 4 # accumulation_steps
         self.optimizer_key: str = optimizer_key
         self.loss_key: str = loss_key
         self.decouple_weight_decay = decouple_weight_decay
